@@ -3,7 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Sentry\Client;
 use Throwable;
+use function Sentry\captureException;
 
 class Handler extends ExceptionHandler
 {

@@ -15,9 +15,8 @@ class InstallCommand extends Command
     {
         $this->call('storage:link');
         // Telescope create migrations that's why this command before migrate command
-        $this->call('telescope:install');
         $this->call('migrate');
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }

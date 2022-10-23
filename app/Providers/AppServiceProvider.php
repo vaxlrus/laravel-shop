@@ -6,45 +6,33 @@ use App\Http\Kernel;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     *
-     * @return void
-     */
-    public function register()
-    {
-        //
-    }
-
-    /**
-     * Bootstrap any application services.
-     *
-     * @return void
-     */
-    public function boot()
+    public function boot(): void
     {
         // Выбрасывает исключение если N+1
-        Model::preventLazyLoading(! app()->isProduction());
+        Model::shouldBeStrict(!app()->isProduction());
 
-        // Выбрасывает исключение если обращение у модели к свойству которое есть в миграции, но не задано в $fillable
-        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
+        // Уведомление о слишком долгом подключении к БД или долгом выполнении SQL запроса
+        if (app()->isProduction()) {
+            DB::listen(static function($query) {
 
-        DB::whenQueryingForLongerThan(500, function(Connection $connection) {
-            logger()
-                ->channel('telegram')
-                ->debug('whenQueryingForLongerThan: ' . $connection->query()->toSql());
-        });
+                if ($query->time > 500) {
+                    logger()
+                        ->channel('telegram')
+                        ->debug('Слишком долгий запрос: ' . $query->sql, $query->bindings);
+                }
+            });
+        }
 
-        // todo 3rd lesson
-        $kernel = app(Kernel::class);
-        $kernel->whenRequestLifecycleIsLongerThan(
+        // Уведомление о слишком долгом выполнении запроса к сайту
+        app(Kernel::class)->whenRequestLifecycleIsLongerThan(
             CarbonInterval::seconds(4),
-            function () {
+            static function () {
                 logger()
                     ->channel('telegram')
                     ->debug('whenRequestLifecycleIsLongerThan: ' . request()->url());
